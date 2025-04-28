@@ -1,0 +1,105 @@
+#include <iostream>
+#include <omp.h>
+#include <vector>
+#include <chrono>
+using namespace std;
+using namespace chrono;
+
+// Sequential Bubble Sort
+void bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for(int i=0;i<n-1;i++) {
+        for(int j=0;j<n-i-1;j++) {
+            if(arr[j]>arr[j+1])
+                swap(arr[j],arr[j+1]);
+        }
+    }
+}
+
+// Parallel Bubble Sort using OpenMP
+void parallelBubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for(int i=0;i<n-1;i++) {
+        #pragma omp parallel for
+        for(int j=0;j<n-i-1;j++) {
+            if(arr[j]>arr[j+1])
+                swap(arr[j],arr[j+1]);
+        }
+    }
+}
+
+// Merge function for Merge Sort
+void merge(vector<int>& arr, int l, int m, int r) {
+    vector<int> left(arr.begin()+l, arr.begin()+m+1);
+    vector<int> right(arr.begin()+m+1, arr.begin()+r+1);
+    int i=0,j=0,k=l;
+    while(i<left.size() && j<right.size())
+        arr[k++] = (left[i]<right[j]) ? left[i++] : right[j++];
+    while(i<left.size())
+        arr[k++] = left[i++];
+    while(j<right.size())
+        arr[k++] = right[j++];
+}
+
+// Sequential Merge Sort
+void mergeSort(vector<int>& arr, int l, int r) {
+    if(l<r) {
+        int m = (l+r)/2;
+        mergeSort(arr,l,m);
+        mergeSort(arr,m+1,r);
+        merge(arr,l,m,r);
+    }
+}
+
+// Parallel Merge Sort using OpenMP
+void parallelMergeSort(vector<int>& arr, int l, int r) {
+    if(l<r) {
+        int m = (l+r)/2;
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            parallelMergeSort(arr,l,m);
+            #pragma omp section
+            parallelMergeSort(arr,m+1,r);
+        }
+        merge(arr,l,m,r);
+    }
+}
+
+// Main function to test
+int main() {
+    int n = 5000;
+    vector<int> arr1(n), arr2(n), arr3(n), arr4(n);
+
+    // Fill with random numbers
+    for(int i=0;i<n;i++)
+        arr1[i] = arr2[i] = arr3[i] = arr4[i] = rand()%10000;
+
+    cout<<"Sorting "<<n<<" elements...\n";
+
+    // Sequential Bubble Sort
+    auto start = high_resolution_clock::now();
+    bubbleSort(arr1);
+    auto end = high_resolution_clock::now();
+    cout<<"Sequential Bubble Sort Time: "<<duration_cast<milliseconds>(end-start).count()<<" ms\n";
+
+    // Parallel Bubble Sort
+    start = high_resolution_clock::now();
+    parallelBubbleSort(arr2);
+    end = high_resolution_clock::now();
+    cout<<"Parallel Bubble Sort Time: "<<duration_cast<milliseconds>(end-start).count()<<" ms\n";
+
+    // Sequential Merge Sort
+    start = high_resolution_clock::now();
+    mergeSort(arr3,0,n-1);
+    end = high_resolution_clock::now();
+    cout<<"Sequential Merge Sort Time: "<<duration_cast<milliseconds>(end-start).count()<<" ms\n";
+
+    // Parallel Merge Sort
+    start = high_resolution_clock::now();
+    parallelMergeSort(arr4,0,n-1);
+    end = high_resolution_clock::now();
+    cout<<"Parallel Merge Sort Time: "<<duration_cast<milliseconds>(end-start).count()<<" ms\n";
+
+    return 0;
+}
